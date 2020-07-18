@@ -60,4 +60,10 @@ public class ManageController {
         return attrValueList;
     }
 
+    @RequestMapping("/baseSaleAttrList")
+    public List<BaseSaleAttr> getBaseSaleAttrList() {
+
+        return manageService.getBaseSaleAttrList();
+    }
+
 }

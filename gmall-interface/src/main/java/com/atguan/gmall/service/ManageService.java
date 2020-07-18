@@ -55,4 +55,25 @@ public interface ManageService {
      * @return
      */
     BaseAttrInfo getAttrInfo(String attrId);
+
+    List<SpuInfo> getSpuList(String catalog3Id);
+
+    /**
+     * 根据catalog3Id查询SpuList
+     * @param spuInfo
+     * @return
+     */
+    List<SpuInfo> getSpuList(SpuInfo spuInfo);
+
+    /**
+     * 查询右销售属性
+     * @return
+     */
+    List<BaseSaleAttr> getBaseSaleAttrList();
+
+    /**
+     * 保存SpuInfo
+     * @param spuInfo
+     */
+    void saveSpuInfo(SpuInfo spuInfo);
 }
