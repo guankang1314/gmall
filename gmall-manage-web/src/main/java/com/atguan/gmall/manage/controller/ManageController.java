@@ -3,7 +3,9 @@ package com.atguan.gmall.manage.controller;
 
 import com.alibaba.dubbo.config.annotation.Reference;
 import com.atguan.gmall.bean.*;
+import com.atguan.gmall.service.ListService;
 import com.atguan.gmall.service.ManageService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +18,9 @@ public class ManageController {
 
     @Reference
     private ManageService manageService;
+
+    @Reference
+    private ListService listService;
 
     @RequestMapping("/getCatalog1")
     @ResponseBody
@@ -64,6 +69,20 @@ public class ManageController {
     public List<BaseSaleAttr> getBaseSaleAttrList() {
 
         return manageService.getBaseSaleAttrList();
+    }
+
+
+    @RequestMapping("/onSale")
+    public void onSale(@RequestParam String skuId) {
+
+        SkuLsInfo skuLsInfo = new SkuLsInfo();
+
+        //给skuLsInfo赋值
+        SkuInfo skuInfo = manageService.getSkuInfo(skuId);
+        //属性对拷
+        BeanUtils.copyProperties(skuInfo,skuLsInfo);
+
+        listService.saveSkuLsInfo(skuLsInfo);
     }
 
 }

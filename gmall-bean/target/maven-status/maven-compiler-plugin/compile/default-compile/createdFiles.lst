@@ -1,5 +1,7 @@
 com\atguan\gmall\bean\SkuImage.class
 com\atguan\gmall\bean\SkuInfo.class
 com\atguan\gmall\bean\SkuAttrValue.class
+com\atguan\gmall\bean\SkuLsParams.class
 com\atguan\gmall\bean\SkuSaleAttrValue.class
 com\atguan\gmall\bean\UserInfo.class
+com\atguan\gmall\bean\SkuLsResult.class
