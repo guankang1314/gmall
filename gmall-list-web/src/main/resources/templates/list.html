@@ -70,11 +70,11 @@
             筛选条件	    
         </div>
 		<i><img src="/image/right-@1x.png" alt=""></i>
-        <span  >&quot;小米&quot;</span>
-		<a class="select-attr"     href="#"     > 2G<b> ✖ </b>
+        <span th:if="${keyword}!=null" th:text="'&quot;'+${keyword}+'&quot;'">&quot;小米&quot;</span>
+		<a class="select-attr" th:text="${baseAttrValue.valueName}+'✖'" th:href="'list.html?'+${baseAttrValue.urlParam}" th:each="baseAttrValue:${baseAttrValueList}"> 2G<b> ✖ </b>
 		</a>
-		 <a class="select-attr"   href="#"      > 屏幕尺寸:5.1-5.5英寸<b> ✖ </b>
-		</a>
+<!--		 <a class="select-attr"   href="#"      > 屏幕尺寸:5.1-5.5英寸<b> ✖ </b>-->
+<!--		</a>-->
 
     </div>
 </div>
@@ -90,28 +90,19 @@
             </div>
             <div class="GM_nav_logo">
 
-                <div class="GM_pre"  >
+                <div class="GM_pre" th:each="baseAttrInfo:${baseAttrInfoList}" >
                     <div class="sl_key">
-                        <span  >属性1111：</span>
+                        <span th:text="${baseAttrInfo.attrName}"  >属性1111：</span>
                     </div>
                     <div class="sl_value">
                         <ul>
-                            <li  ><a  href="#"  >属性值111</a></li>
-							<li  ><a  href="#"  >属性值222</a></li>
+                            <li th:each="attrValue:${baseAttrInfo.attrValueList}" >
+                                <a th:text="${attrValue.valueName}" th:href="'list.html?'+${urlParam}+'&valueId='+${attrValue.id}"  >属性值111</a>
+                            </li>
 						  </ul>
                     </div>
                 </div>
-				 <div class="GM_pre"  >
-                    <div class="sl_key">
-                        <span  >属性222：</span>
-                    </div>
-                    <div class="sl_value">
-                        <ul>
-                             <li  ><a href="#"   >属性值333</a></li>
-							<li  ><a href="#"  >属性值444</a></li>
-							</ul>
-                    </div>
-                </div>
+
             </div>
         </div>
 

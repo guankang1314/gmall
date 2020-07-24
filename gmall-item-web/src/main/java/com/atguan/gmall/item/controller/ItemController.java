@@ -7,6 +7,7 @@ import com.atguan.gmall.bean.SkuImage;
 import com.atguan.gmall.bean.SkuInfo;
 import com.atguan.gmall.bean.SkuSaleAttrValue;
 import com.atguan.gmall.bean.SpuSaleAttr;
+import com.atguan.gmall.service.ListService;
 import com.atguan.gmall.service.ManageService;
 import org.assertj.core.internal.cglib.asm.$AnnotationVisitor;
 import org.springframework.stereotype.Controller;
@@ -23,6 +24,9 @@ public class ItemController {
 
     @Reference
     private ManageService manageService;
+
+    @Reference
+    private ListService listService;
 
     @RequestMapping("{skuId}.html")
     public String item(@PathVariable("skuId") String skuId, HttpServletRequest request) {
@@ -66,6 +70,8 @@ public class ItemController {
             }
 
         }
+
+        listService.incrHotScore(skuId);
 
         //将map转化为json字符串
         String s = JSON.toJSONString(map);

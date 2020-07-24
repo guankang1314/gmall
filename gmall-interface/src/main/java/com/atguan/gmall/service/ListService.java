@@ -20,4 +20,10 @@ public interface ListService {
      */
     SkuLsResult search(SkuLsParams skuLsParams);
 
+    /**
+     * 记录每个商品被访问的次数
+     * @param skuId
+     */
+    void incrHotScore(String skuId);
+
 }

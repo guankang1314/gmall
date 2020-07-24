@@ -4,11 +4,13 @@ import com.alibaba.dubbo.config.annotation.Service;
 import com.atguan.gmall.bean.SkuLsInfo;
 import com.atguan.gmall.bean.SkuLsParams;
 import com.atguan.gmall.bean.SkuLsResult;
+import com.atguan.gmall.config.RedisUtil;
 import com.atguan.gmall.service.ListService;
 import io.searchbox.client.JestClient;
 import io.searchbox.core.Index;
 import io.searchbox.core.Search;
 import io.searchbox.core.SearchResult;
+import io.searchbox.core.Update;
 import io.searchbox.core.search.aggregation.MetricAggregation;
 import io.searchbox.core.search.aggregation.TermsAggregation;
 import org.apache.lucene.util.QueryBuilder;
@@ -22,6 +24,7 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.highlight.HighlightBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import redis.clients.jedis.Jedis;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,6 +37,9 @@ public class ListServiceImpl implements ListService {
 
     @Autowired
     private JestClient jestClient;
+
+    @Autowired
+    private RedisUtil redisUtil;
 
 
     public static final String ES_INDEX="gmall";
@@ -76,6 +82,40 @@ public class ListServiceImpl implements ListService {
         SkuLsResult skuLsResult = makeResultForSearch(result,skuLsParams);
 
         return skuLsResult;
+    }
+
+    @Override
+    public void incrHotScore(String skuId) {
+
+        //获取jedis
+        Jedis jedis = redisUtil.getJedis();
+
+        String hotKey = "hotScore";
+
+        Double count = jedis.zincrby(hotKey, 1, "skuId" + skuId);
+        //按照一定规则更新
+        if (count%10 == 0) {
+            //更新语句
+            updateHotScore(skuId,Math.round(count));
+        }
+    }
+
+    private void updateHotScore(String skuId, long round) {
+
+        //dsl语句
+        String upd = "{\n" +
+                "  \"doc\": {\n" +
+                "    \"hotScore\":"+round+"\n" +
+                "  }\n" +
+                "}";
+        Update build = new Update.Builder(upd).index(ES_INDEX).type(ES_TYPE).id(skuId).build();
+
+        try {
+            jestClient.execute(build);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private SkuLsResult makeResultForSearch(SearchResult result, SkuLsParams skuLsParams) {
