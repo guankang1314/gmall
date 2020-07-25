@@ -7,6 +7,7 @@ import com.atguan.gmall.bean.SkuImage;
 import com.atguan.gmall.bean.SkuInfo;
 import com.atguan.gmall.bean.SkuSaleAttrValue;
 import com.atguan.gmall.bean.SpuSaleAttr;
+import com.atguan.gmall.config.LoginRequire;
 import com.atguan.gmall.service.ListService;
 import com.atguan.gmall.service.ManageService;
 import org.assertj.core.internal.cglib.asm.$AnnotationVisitor;
@@ -29,6 +30,7 @@ public class ItemController {
     private ListService listService;
 
     @RequestMapping("{skuId}.html")
+    @LoginRequire //用户在访问商品详情的时候，必须登录
     public String item(@PathVariable("skuId") String skuId, HttpServletRequest request) {
 
         SkuInfo skuInfo = manageService.getSkuInfo(skuId);
