@@ -30,7 +30,7 @@ public class ItemController {
     private ListService listService;
 
     @RequestMapping("{skuId}.html")
-    @LoginRequire //用户在访问商品详情的时候，必须登录
+//    @LoginRequire //用户在访问商品详情的时候，必须登录
     public String item(@PathVariable("skuId") String skuId, HttpServletRequest request) {
 
         SkuInfo skuInfo = manageService.getSkuInfo(skuId);
