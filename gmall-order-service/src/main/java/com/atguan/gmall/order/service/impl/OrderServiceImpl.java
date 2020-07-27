@@ -6,16 +6,16 @@ import com.atguan.gmall.bean.OrderDetail;
 import com.atguan.gmall.bean.OrderInfo;
 import com.atguan.gmall.bean.enums.OrderStatus;
 import com.atguan.gmall.bean.enums.ProcessStatus;
+import com.atguan.gmall.config.RedisUtil;
 import com.atguan.gmall.order.mapper.OrderDetailMapper;
 import com.atguan.gmall.order.mapper.OrderInfoMapper;
 import com.atguan.gmall.service.OrderService;
+import com.atguan.gmall.util.HttpClientUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+import redis.clients.jedis.Jedis;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -26,6 +26,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private OrderInfoMapper orderInfoMapper;
+
+    @Autowired
+    private RedisUtil redisUtil;
 
     @Override
     @Transactional
@@ -57,5 +60,56 @@ public class OrderServiceImpl implements OrderService {
             orderDetailMapper.insertSelective(orderDetail);
         }
         return orderInfo.getId();
+    }
+
+    @Override
+    public String getTradeNo(String userId) {
+
+        //获取jedis
+        Jedis jedis = redisUtil.getJedis();
+        //定义key
+        String tradeNoKey = "user:"+userId+":tradeCode";
+        //定义流水号
+        String tradeNo = UUID.randomUUID().toString().replaceAll("-","");
+        //存值
+        jedis.set(tradeNoKey,tradeNo);
+
+        jedis.close();
+        return tradeNo;
+    }
+
+    @Override
+    public boolean checkTradeCode(String userId, String tradeCodeNo) {
+
+        //获取缓存的流水号
+        //获取jedis
+        Jedis jedis = redisUtil.getJedis();
+        //定义key
+        String tradeNoKey = "user:"+userId+":tradeCode";
+        String tradeNo = jedis.get(tradeNoKey);
+
+        jedis.close();
+
+        return tradeCodeNo.equals(tradeNo);
+    }
+
+    @Override
+    public void delTradeCode(String userId) {
+
+        //获取jedis
+        Jedis jedis = redisUtil.getJedis();
+        //定义key
+        String tradeNoKey = "user:"+userId+":tradeCode";
+        //删除
+        jedis.del(tradeNoKey);
+        jedis.close();
+    }
+
+    @Override
+    public boolean checkStock(String skuId, Integer skuNum) {
+
+        String result = HttpClientUtil.doGet("http://www.gware.com/hasStock?skuId=" + skuId + "&num=" + skuNum);
+
+        return "1".equals(result);
     }
 }

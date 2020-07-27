@@ -216,7 +216,8 @@ public class CartInfoServiceImpl implements CartInfoService {
      * @param userId
      * @return
      */
-    private List<CartInfo> loadCartCache(String userId) {
+    @Override
+    public List<CartInfo> loadCartCache(String userId) {
 
         //从cartInfo，skuInfo两张表中查
         List<CartInfo> cartInfoList = cartInfoMapper.selectCartListWithCurPrice(userId);

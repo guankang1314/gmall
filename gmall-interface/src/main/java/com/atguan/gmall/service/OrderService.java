@@ -10,4 +10,34 @@ public interface OrderService {
      * @return
      */
     String saveOrder(OrderInfo orderInfo);
+
+
+    /**
+     * 生成流水号
+     * @param userId
+     * @return
+     */
+    String getTradeNo(String userId);
+
+    /**
+     * 比较流水号
+     * @param userId
+     * @param tradeCodeNo
+     * @return
+     */
+    boolean checkTradeCode(String userId,String tradeCodeNo);
+
+    /**
+     * 删除流水号
+     * @param userId
+     */
+    void  delTradeCode(String userId);
+
+    /**
+     * 检验库存
+     * @param skuId
+     * @param skuNum
+     * @return
+     */
+    boolean checkStock(String skuId, Integer skuNum);
 }

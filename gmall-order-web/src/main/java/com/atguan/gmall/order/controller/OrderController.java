@@ -2,12 +2,10 @@ package com.atguan.gmall.order.controller;
 
 
 import com.alibaba.dubbo.config.annotation.Reference;
-import com.atguan.gmall.bean.CartInfo;
-import com.atguan.gmall.bean.OrderDetail;
-import com.atguan.gmall.bean.OrderInfo;
-import com.atguan.gmall.bean.UserAddress;
+import com.atguan.gmall.bean.*;
 import com.atguan.gmall.config.LoginRequire;
 import com.atguan.gmall.service.CartInfoService;
+import com.atguan.gmall.service.ManageService;
 import com.atguan.gmall.service.OrderService;
 import com.atguan.gmall.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +35,9 @@ public class OrderController {
 
     @Reference
     private OrderService orderService;
+
+    @Reference
+    private ManageService manageService;
 
 
 //    @RequestMapping("trade")
@@ -82,6 +83,9 @@ public class OrderController {
         //保存用户清单集合
         request.setAttribute("orderDetailList",orderDetailList);
 
+        String tradeNo = orderService.getTradeNo(userId);
+        request.setAttribute("tradeNo",tradeNo);
+
         return "trade";
     }
 
@@ -93,7 +97,47 @@ public class OrderController {
 
         orderInfo.setUserId(userId);
 
+        //判断表单是否重复提交
+        String tradeNo = (String) request.getParameter("tradeNo");
+        boolean b = orderService.checkTradeCode(userId, tradeNo);
+        if (!b) {
+
+            request.setAttribute("errMsg","订单已提交，不能重复提交");
+            return "tradeFail";
+        }
+
+        //验证库存
+        List<OrderDetail> orderDetailList = orderInfo.getOrderDetailList();
+        if (orderDetailList != null && orderDetailList.size() > 0) {
+            for (OrderDetail orderDetail : orderDetailList) {
+                String skuId = orderDetail.getSkuId();
+                Integer skuNum = orderDetail.getSkuNum();
+
+                boolean checkStock = orderService.checkStock(skuId,skuNum);
+                if (!checkStock) {
+                    request.setAttribute("errMsg","商品库存不足");
+                    return "tradeFail";
+                }
+
+                //验证订单价格
+                SkuInfo skuInfo = manageService.getSkuInfo(skuId);
+                int res = skuInfo.getPrice().compareTo(orderDetail.getOrderPrice());
+                if (res != 0) {
+                    request.setAttribute("errMsg","价格不匹配");
+                    return "tradeFail";
+                }
+
+                cartInfoService.loadCartCache()
+
+            }
+        }
+
+
+
         String orderId = orderService.saveOrder(orderInfo);
+
+        //删除流水号
+        orderService.delTradeCode(userId);
 
         return "redirect://payment.gmall.com/index?orderId="+orderId;
     }

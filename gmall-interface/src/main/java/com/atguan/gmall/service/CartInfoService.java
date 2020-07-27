@@ -43,4 +43,11 @@ public interface CartInfoService {
      * @return
      */
     List<CartInfo> getCartCheckedList(String userId);
+
+    /**
+     * 数据库查询商品数据
+     * @param userId
+     * @return
+     */
+    List<CartInfo> loadCartCache(String userId);
 }
