@@ -40,4 +40,11 @@ public interface OrderService {
      * @return
      */
     boolean checkStock(String skuId, Integer skuNum);
+
+    /**
+     * 通过orderId获取orderInfo
+     * @param orderId
+     * @return
+     */
+    OrderInfo getOrderInfo(String orderId);
 }

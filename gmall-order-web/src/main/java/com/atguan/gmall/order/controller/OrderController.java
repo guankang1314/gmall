@@ -124,11 +124,9 @@ public class OrderController {
                 int res = skuInfo.getPrice().compareTo(orderDetail.getOrderPrice());
                 if (res != 0) {
                     request.setAttribute("errMsg","价格不匹配");
+                    cartInfoService.loadCartCache(userId);
                     return "tradeFail";
                 }
-
-                cartInfoService.loadCartCache()
-
             }
         }
 

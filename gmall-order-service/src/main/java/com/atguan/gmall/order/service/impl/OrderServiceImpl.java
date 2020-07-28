@@ -112,4 +112,10 @@ public class OrderServiceImpl implements OrderService {
 
         return "1".equals(result);
     }
+
+    @Override
+    public OrderInfo getOrderInfo(String orderId) {
+
+        return orderInfoMapper.selectByPrimaryKey(orderId);
+    }
 }
