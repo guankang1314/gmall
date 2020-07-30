@@ -1,6 +1,7 @@
 package com.atguan.gmall.service;
 
 import com.atguan.gmall.bean.OrderInfo;
+import com.atguan.gmall.bean.enums.ProcessStatus;
 
 public interface OrderService {
 
@@ -47,4 +48,17 @@ public interface OrderService {
      * @return
      */
     OrderInfo getOrderInfo(String orderId);
+
+    /**
+     * 取出消息队列中的数据更新订单状态
+     * @param orderId
+     * @param processStatus
+     */
+    void updateOrderStatus(String orderId, ProcessStatus processStatus);
+
+    /**
+     * 发送消息给库存模块，通知减库存
+     * @param orderId
+     */
+    void sendOrderStatus(String orderId);
 }

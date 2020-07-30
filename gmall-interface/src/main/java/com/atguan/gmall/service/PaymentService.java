@@ -41,4 +41,11 @@ public interface PaymentService {
      * @return
      */
     Map<String,String> createNative(String orderId, String s);
+
+    /**
+     * 发送订单给消息队列
+     * @param paymentInfo
+     * @param result
+     */
+    void sendPaymentResult(PaymentInfo paymentInfo,String result);
 }

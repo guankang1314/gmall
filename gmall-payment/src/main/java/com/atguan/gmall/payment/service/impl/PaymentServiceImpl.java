@@ -11,15 +11,18 @@ import com.alipay.api.request.AlipayTradeRefundRequest;
 import com.alipay.api.response.AlipayTradeRefundResponse;
 import com.atguan.gmall.bean.OrderInfo;
 import com.atguan.gmall.bean.PaymentInfo;
+import com.atguan.gmall.config.ActiveMQUtil;
 import com.atguan.gmall.payment.mapper.PaymentInfoMapper;
 import com.atguan.gmall.service.OrderService;
 import com.atguan.gmall.service.PaymentService;
 import com.atguan.gmall.util.HttpClient;
 import com.github.wxpay.sdk.WXPayUtil;
+import org.apache.activemq.command.ActiveMQMapMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import tk.mybatis.mapper.entity.Example;
 
+import javax.jms.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +37,9 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Autowired
     private AlipayClient alipayClient;
+
+    @Autowired
+    private ActiveMQUtil activeMQUtil;
 
     @Reference
     private OrderService orderService;
@@ -156,5 +162,39 @@ public class PaymentServiceImpl implements PaymentService {
             e.printStackTrace();
         }
         return null;
+    }
+
+    @Override
+    public void sendPaymentResult(PaymentInfo paymentInfo, String result) {
+
+        //创建连接
+        Connection connection = activeMQUtil.getConnection();
+
+        try {
+            //打开连接
+            connection.start();
+            //创建session
+            Session session = connection.createSession(true, Session.SESSION_TRANSACTED);
+            //创建队列
+            Queue payment_result_queue = session.createQueue("PAYMENT_RESULT_QUEUE");
+            //创建消息提供者
+            MessageProducer producer = session.createProducer(payment_result_queue);
+            //创建消息对象
+            ActiveMQMapMessage activeMQMapMessage = new ActiveMQMapMessage();
+            activeMQMapMessage.setString("orderId",paymentInfo.getOrderId());
+            activeMQMapMessage.setString("result",result);
+
+            //发送消息
+            producer.send(activeMQMapMessage);
+            //提交
+            session.commit();
+            //关闭
+            producer.close();
+            session.close();
+            connection.close();
+        } catch (JMSException e) {
+            e.printStackTrace();
+        }
+
     }
 }

@@ -1,31 +1,20 @@
-package com.atguan.gmall.payment;
+package com.atguan.gmall.payment.mq;
 
-import com.atguan.gmall.config.ActiveMQUtil;
+import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.activemq.command.ActiveMQTextMessage;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.jms.*;
 
-@RunWith(SpringRunner.class)
-@SpringBootTest
-public class GmallPaymentApplicationTests {
+public class ProducerTest {
 
+    public static void main(String[] args) throws JMSException {
 
-    @Autowired
-    private ActiveMQUtil activeMQUtil;
+        //创建连接工厂
+        ActiveMQConnectionFactory activeMQConnectionFactory = new ActiveMQConnectionFactory("tcp://192.168.113.132:61616");
 
-    @Test
-    public void contextLoads() {
-    }
-
-    @Test
-    public void testMQ() throws JMSException {
-
-        Connection connection = activeMQUtil.getConnection();
+        //创建连接
+        Connection connection = activeMQConnectionFactory.createConnection();
 
         //开启连接
         connection.start();
@@ -52,5 +41,4 @@ public class GmallPaymentApplicationTests {
         session.close();
         connection.close();
     }
-
 }

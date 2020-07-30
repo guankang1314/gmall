@@ -159,6 +159,8 @@ public class PaymentController {
                 paymentInfoUPD.setPaymentStatus(PaymentStatus.PAID);
                 paymentInfoUPD.setCallbackTime(new Date());
                 paymentService.updatePaymentInfo(out_trade_no,paymentInfoUPD);
+                //消息队列
+                paymentService.sendPaymentResult(paymentInfoHas,"success");
                 return "success";
             }
 
@@ -193,5 +195,13 @@ public class PaymentController {
 
         System.err.println(map.get("code_url"));
         return map;
+    }
+
+    @RequestMapping("sendPaymentResult")
+    @ResponseBody
+    public String sendPaymentResult(PaymentInfo paymentInfo,String result) {
+
+        paymentService.sendPaymentResult(paymentInfo,result);
+        return "ok";
     }
 }
