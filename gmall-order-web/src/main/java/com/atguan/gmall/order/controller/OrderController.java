@@ -2,6 +2,7 @@ package com.atguan.gmall.order.controller;
 
 
 import com.alibaba.dubbo.config.annotation.Reference;
+import com.alibaba.fastjson.JSON;
 import com.atguan.gmall.bean.*;
 import com.atguan.gmall.config.LoginRequire;
 import com.atguan.gmall.service.CartInfoService;
@@ -20,6 +21,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.swing.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class OrderController {
@@ -138,6 +140,27 @@ public class OrderController {
         orderService.delTradeCode(userId);
 
         return "redirect://payment.gmall.com/index?orderId="+orderId;
+    }
+
+    @RequestMapping("orderSplit")
+    @ResponseBody
+    public String orderSplit(HttpServletRequest request) {
+
+        String orderId = request.getParameter("orderId");
+        String wareSkuMap = request.getParameter("wareSkuMap");
+
+        List<OrderInfo> orderInfoList = orderService.splitOrder(orderId,wareSkuMap);
+
+        //定义集合存放map
+        List<Map> list = new ArrayList<>();
+        for (OrderInfo orderInfo : orderInfoList) {
+
+            Map map = orderService.initWareOrder(orderInfo);
+
+            list.add(map);
+        }
+
+        return JSON.toJSONString(list);
     }
 
 }

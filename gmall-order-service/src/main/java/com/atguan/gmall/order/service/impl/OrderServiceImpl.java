@@ -1,6 +1,7 @@
 package com.atguan.gmall.order.service.impl;
 
 
+import com.alibaba.dubbo.config.annotation.Reference;
 import com.alibaba.dubbo.config.annotation.Service;
 import com.alibaba.fastjson.JSON;
 import com.atguan.gmall.bean.OrderDetail;
@@ -12,11 +13,15 @@ import com.atguan.gmall.config.RedisUtil;
 import com.atguan.gmall.order.mapper.OrderDetailMapper;
 import com.atguan.gmall.order.mapper.OrderInfoMapper;
 import com.atguan.gmall.service.OrderService;
+import com.atguan.gmall.service.PaymentService;
 import com.atguan.gmall.util.HttpClientUtil;
 import org.apache.activemq.command.ActiveMQTextMessage;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Transactional;
 import redis.clients.jedis.Jedis;
+import tk.mybatis.mapper.entity.Example;
 
 import javax.jms.*;
 import javax.jms.Queue;
@@ -37,6 +42,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private ActiveMQUtil activeMQUtil;
+
+    @Reference
+    private PaymentService paymentService;
 
     @Override
     @Transactional
@@ -183,6 +191,27 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    @Override
+    public List<OrderInfo> getExpiredOrderList() {
+
+        //当前系统时间>过期时间 && 订单未支付
+        Example example = new Example(OrderInfo.class);
+        example.createCriteria().andLessThan("expireTime",new Date()).andEqualTo("processStatus",ProcessStatus.UNPAID);
+
+        return orderInfoMapper.selectByExample(example);
+    }
+
+    @Override
+    @Async
+    public void execExpiredOrder(OrderInfo orderInfo) {
+
+        //更新订单状态为已关闭
+        updateOrderStatus(orderInfo.getId(),ProcessStatus.CLOSED);
+
+        //调用paymentService处理过期订单
+        paymentService.closePayment(orderInfo.getId());
+    }
+
     /**
      * 生成JSON字符串
      * @param orderId
@@ -199,7 +228,8 @@ public class OrderServiceImpl implements OrderService {
         return JSON.toJSONString(map);
     }
 
-    private Map initWareOrder(OrderInfo orderInfo) {
+    @Override
+    public Map initWareOrder(OrderInfo orderInfo) {
 
         Map<String,Object> map = new HashMap<>();
 
@@ -210,6 +240,8 @@ public class OrderServiceImpl implements OrderService {
         map.put("orderComment",orderInfo.getOrderComment());
         map.put("deliveryAddress",orderInfo.getDeliveryAddress());
         map.put("paymentWay","2");
+
+        map.put("wareId",orderInfo.getWareId());
 
         List<OrderDetail> orderDetailList = orderInfo.getOrderDetailList();
 
@@ -227,5 +259,71 @@ public class OrderServiceImpl implements OrderService {
         map.put("details",list);
         return map;
 
+    }
+
+    @Override
+    public List<OrderInfo> splitOrder(String orderId, String wareSkuMap) {
+
+
+        //定义子订单集合
+        List<OrderInfo> subOrderInfoList = new ArrayList<>();
+
+        //获取原始订单
+        OrderInfo orderInfoOrigin = getOrderInfo(orderId);
+
+        //[{"wareId":"1","skuIds":["2","10"]},{"wareId":"2","skuIds":["3"]}]
+
+        List<Map> maps = JSON.parseArray(wareSkuMap, Map.class);
+        if (maps != null) {
+            for (Map map : maps) {
+                //获取仓库id
+                String wareId = (String) map.get("wareId");
+                //获取仓库中的商品id
+                List<String> skuIds = (List<String>) map.get("skuIds");
+
+                OrderInfo subOrderInfo = new OrderInfo();
+
+                //为子订单赋值
+                BeanUtils.copyProperties(orderInfoOrigin,subOrderInfo);
+
+                //子订单id必须为null
+                //修改子订单中和父订单不同的字段属性
+                subOrderInfo.setId(null);
+                subOrderInfo.setWareId(wareId);
+                subOrderInfo.setParentOrderId(orderInfoOrigin.getId());
+
+                //子订单明细集合
+                List<OrderDetail> subOrderDetailList = new ArrayList<>();
+                //计算子订单价格
+                List<OrderDetail> orderDetailList = orderInfoOrigin.getOrderDetailList();
+                for (OrderDetail orderDetail : orderDetailList) {
+                    for (String skuId : skuIds) {
+
+                        //比较skuId
+                        if (skuId.equals(orderDetail.getSkuId())) {
+                            //是同一个sku
+                            orderDetail.setId(null);
+                            subOrderDetailList.add(orderDetail);
+
+                        }
+                    }
+                }
+
+                //将新的子订单明细方法子订单中
+                subOrderInfo.setOrderDetailList(subOrderDetailList);
+                //计算子订单价格
+                subOrderInfo.sumTotalAmount();
+                //保存到数据库中
+                saveOrder(subOrderInfo);
+
+                //把新的子订单放入subOrderInfoList
+                subOrderInfoList.add(subOrderInfo);
+            }
+        }
+
+        //更新订单状态为拆单
+        updateOrderStatus(orderId,ProcessStatus.SPLIT);
+
+        return subOrderInfoList;
     }
 }

@@ -3,6 +3,9 @@ package com.atguan.gmall.service;
 import com.atguan.gmall.bean.OrderInfo;
 import com.atguan.gmall.bean.enums.ProcessStatus;
 
+import java.util.List;
+import java.util.Map;
+
 public interface OrderService {
 
     /**
@@ -61,4 +64,31 @@ public interface OrderService {
      * @param orderId
      */
     void sendOrderStatus(String orderId);
+
+    /**
+     * 查询过期订单
+     * @return
+     */
+    List<OrderInfo> getExpiredOrderList();
+
+    /**
+     * 处理过期订单
+     * @param orderInfo
+     */
+    void execExpiredOrder(OrderInfo orderInfo);
+
+    /**
+     *将orderInfo转换成需要的map集合
+     * @param orderInfo
+     * @return
+     */
+    Map initWareOrder(OrderInfo orderInfo);
+
+    /**
+     * 拆单接口
+     * @param orderId
+     * @param wareSkuMap
+     * @return
+     */
+    List<OrderInfo> splitOrder(String orderId, String wareSkuMap);
 }

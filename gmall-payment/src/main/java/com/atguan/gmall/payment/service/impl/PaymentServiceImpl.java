@@ -7,16 +7,21 @@ import com.alibaba.fastjson.JSON;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.DefaultAlipayClient;
+import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.request.AlipayTradeRefundRequest;
+import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.alipay.api.response.AlipayTradeRefundResponse;
 import com.atguan.gmall.bean.OrderInfo;
 import com.atguan.gmall.bean.PaymentInfo;
+import com.atguan.gmall.bean.enums.PaymentStatus;
+import com.atguan.gmall.bean.enums.ProcessStatus;
 import com.atguan.gmall.config.ActiveMQUtil;
 import com.atguan.gmall.payment.mapper.PaymentInfoMapper;
 import com.atguan.gmall.service.OrderService;
 import com.atguan.gmall.service.PaymentService;
 import com.atguan.gmall.util.HttpClient;
 import com.github.wxpay.sdk.WXPayUtil;
+import org.apache.activemq.ScheduledMessage;
 import org.apache.activemq.command.ActiveMQMapMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,8 +46,12 @@ public class PaymentServiceImpl implements PaymentService {
     @Autowired
     private ActiveMQUtil activeMQUtil;
 
+
+
     @Reference
     private OrderService orderService;
+
+
 
     // 服务号Id
     @Value("${appid}")
@@ -196,5 +205,116 @@ public class PaymentServiceImpl implements PaymentService {
             e.printStackTrace();
         }
 
+    }
+
+    @Override
+    public boolean checkPayment(PaymentInfo paymentInfoQuery) {
+
+        //AlipayClient alipayClient = new DefaultAlipayClient("https://openapi.alipay.com/gateway.do","app_id","your private_key","json","GBK","alipay_public_key","RSA2");
+        AlipayTradeQueryRequest request = new AlipayTradeQueryRequest();
+
+        if (paymentInfoQuery.getPaymentStatus().equals(ProcessStatus.CLOSED) || paymentInfoQuery.getPaymentStatus().equals(PaymentStatus.PAID)) {
+            return true;
+        }
+
+        Map<String,Object> map = new HashMap<>();
+
+        //在map中放入数据
+        map.put("out_trade_no",paymentInfoQuery.getOutTradeNo());
+
+        request.setBizContent(JSON.toJSONString(map));
+//        request.setBizContent("{" +
+//                "\"out_trade_no\":\"20150320010101001\"," +
+//                "\"trade_no\":\"2014112611001004680 073956707\"," +
+//                "\"org_pid\":\"2088101117952222\"," +
+//                "      \"query_options\":[" +
+//                "        \"TRADE_SETTLE_INFO\"" +
+//                "      ]" +
+//                "  }");
+        AlipayTradeQueryResponse response = null;
+        try {
+            response = alipayClient.execute(request);
+        } catch (AlipayApiException e) {
+            e.printStackTrace();
+        }
+        if(response.isSuccess()){
+
+            //判断交易是否成功
+            if ("TRADE_SUCCESS".equals(response.getTradeStatus())||"TRADE_FINISHED".equals(response.getTradeStatus())) {
+
+                //支付成功
+                //更新状态
+                PaymentInfo paymentInfo = new PaymentInfo();
+                paymentInfo.setPaymentStatus(PaymentStatus.PAID);
+
+                updatePaymentInfo(paymentInfoQuery.getOutTradeNo(),paymentInfo);
+                //发送消息队列
+                sendPaymentResult(paymentInfoQuery,"success");
+                return true;
+
+            }
+            System.out.println("调用成功");
+        } else {
+            System.out.println("调用失败");
+        }
+        return false;
+    }
+
+    @Override
+    public void sendDelayPaymentResult(String outTradeNo, int delaySec, int checkCount) {
+
+        //创建工厂,获取连接
+        Connection connection = activeMQUtil.getConnection();
+
+        try {
+
+            //开启链接
+            connection.start();
+
+            //创建session
+            Session session = connection.createSession(true, Session.SESSION_TRANSACTED);
+
+            //创建队列
+            Queue payment_result_check_queue = session.createQueue("PAYMENT_RESULT_CHECK_QUEUE");
+            //创建producer
+            MessageProducer producer = session.createProducer(payment_result_check_queue);
+
+            //创建消息对象
+            ActiveMQMapMessage activeMQMapMessage = new ActiveMQMapMessage();
+            activeMQMapMessage.setString("outTradeNo",outTradeNo);
+            activeMQMapMessage.setInt("delaySec",delaySec);
+            activeMQMapMessage.setInt("checkCount",checkCount);
+
+            //设置延迟时间
+            activeMQMapMessage.setLongProperty(ScheduledMessage.AMQ_SCHEDULED_DELAY,delaySec*1000);
+
+            producer.send(activeMQMapMessage);
+
+            //提交
+            session.commit();
+            //关闭
+            closeAll(connection,session,producer);
+
+        } catch (JMSException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void closePayment(String id) {
+
+        Example example = new Example(PaymentInfo.class);
+        example.createCriteria().andEqualTo("orderId",id);
+        PaymentInfo paymentInfo = new PaymentInfo();
+        paymentInfo.setPaymentStatus(PaymentStatus.ClOSED);
+
+        paymentInfoMapper.updateByExampleSelective(paymentInfo,example);
+    }
+
+    private void closeAll(Connection connection, Session session, MessageProducer producer) throws JMSException {
+
+        producer.close();
+        session.close();
+        connection.close();
     }
 }

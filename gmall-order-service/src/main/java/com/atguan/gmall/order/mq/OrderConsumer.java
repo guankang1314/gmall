@@ -36,6 +36,7 @@ public class OrderConsumer {
         }
     }
 
+    //消费减库存成功的消息
     @JmsListener(destination = "SKU_DEDUCT_QUEUE",containerFactory = "jmsQueueListener")
     public void consumeSkuDeduct(MapMessage mapMessage) throws JMSException {
 

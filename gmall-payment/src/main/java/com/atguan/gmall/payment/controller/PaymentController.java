@@ -113,6 +113,9 @@ public class PaymentController {
 //        httpResponse.getWriter().write(form); //直接将完整的表单html输出到页面
 //        httpResponse.getWriter().flush();
 //        httpResponse.getWriter().close();
+
+        //A调用延迟队列
+        paymentService.sendDelayPaymentResult(paymentInfo.getOutTradeNo(),15,3);
         return form;
     }
 
@@ -203,5 +206,19 @@ public class PaymentController {
 
         paymentService.sendPaymentResult(paymentInfo,result);
         return "ok";
+    }
+
+    @RequestMapping("queryPaymentResult")
+    @ResponseBody
+    public String queryPaymentResult(String orderId) {
+
+        //根据orderId查询paymentInfo
+        PaymentInfo paymentInfo = new PaymentInfo();
+        paymentInfo.setOrderId(orderId);
+        PaymentInfo queryPaymentInfo1 = paymentService.getPaymentInfo(paymentInfo);
+        boolean flag = paymentService.checkPayment(queryPaymentInfo1);
+        return ""+flag;
+
+
     }
 }

@@ -48,4 +48,25 @@ public interface PaymentService {
      * @param result
      */
     void sendPaymentResult(PaymentInfo paymentInfo,String result);
+
+    /**
+     * 根据out-trde-no查询交易记录
+     * @param paymentInfoQuery
+     * @return
+     */
+    boolean checkPayment(PaymentInfo paymentInfoQuery);
+
+    /**
+     * 发送延迟队列
+     * @param outTradeNo
+     * @param delaySec
+     * @param checkCount
+     */
+    void sendDelayPaymentResult(String outTradeNo,int delaySec ,int checkCount);
+
+    /**
+     * 处理过期订单
+     * @param id
+     */
+    void closePayment(String id);
 }
