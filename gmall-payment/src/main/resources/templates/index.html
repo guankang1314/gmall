@@ -20,7 +20,7 @@
       <div class="Jdbox_BuySuc">
         <dl>
           <dd>
-            <span th:text="'订单提交成功，请尽快付款！订单号：'+${orderId}"> </span>
+            <span id="orderId" th:value="${orderId}" th:text="'订单提交成功，请尽快付款！订单号：'+${orderId}"> </span>
             <span th:text="'应付金额'+${totalAmount}+'元'"> </span>
           </dd>
           <dd>
@@ -91,7 +91,7 @@
 
       $("#weixin").click(function () {
         // var url=[[${orderId}]];
-        $.post("wx/submit",function (data) {
+        $.post("wx/submit?orderId="+$("#orderId").val(),function (data) {
           var qr = window.qr = new QRious({
             element: document.getElementById('qrious'),
             size: 250,

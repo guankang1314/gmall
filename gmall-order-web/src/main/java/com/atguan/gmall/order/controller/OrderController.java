@@ -9,6 +9,8 @@ import com.atguan.gmall.service.CartInfoService;
 import com.atguan.gmall.service.ManageService;
 import com.atguan.gmall.service.OrderService;
 import com.atguan.gmall.service.UserService;
+import com.atguan.gmall.util.HttpClientUtil;
+import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Controller;
@@ -19,9 +21,10 @@ import org.w3c.dom.ls.LSInput;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.swing.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Stream;
 
 @Controller
 public class OrderController {
@@ -115,11 +118,11 @@ public class OrderController {
                 String skuId = orderDetail.getSkuId();
                 Integer skuNum = orderDetail.getSkuNum();
 
-                boolean checkStock = orderService.checkStock(skuId,skuNum);
-                if (!checkStock) {
-                    request.setAttribute("errMsg","商品库存不足");
-                    return "tradeFail";
-                }
+//                boolean checkStock = orderService.checkStock(skuId,skuNum);
+//                if (!checkStock) {
+//                    request.setAttribute("errMsg","商品库存不足");
+//                    return "tradeFail";
+//                }
 
                 //验证订单价格
                 SkuInfo skuInfo = manageService.getSkuInfo(skuId);
@@ -129,7 +132,36 @@ public class OrderController {
                     cartInfoService.loadCartCache(userId);
                     return "tradeFail";
                 }
+
             }
+
+            //多线程检验库存
+            List<OrderDetail> errList = Collections.synchronizedList(new ArrayList<>());
+            Stream<CompletableFuture<String>> completableFutureStream = orderDetailList.stream().map(orderDetail ->
+
+                    CompletableFuture.supplyAsync(() -> checkSkuNum(orderDetail)).whenComplete((ifpass, ex) -> {
+                        if ("0".equals(ifpass)) {
+                            errList.add(orderDetail);
+                        }
+                    })
+            );
+
+            CompletableFuture[] completableFutures = completableFutureStream.toArray(CompletableFuture[]::new);
+
+            CompletableFuture.allOf(completableFutures);
+
+            //判断是否出现库存不足
+            if (errList.size() > 0) {
+                StringBuffer errStringBuffer = new StringBuffer();
+                for (OrderDetail orderDetail : errList) {
+                    //库存不足
+                    errStringBuffer.append("商品:"+orderDetail.getSkuName()+"库存不足");
+                }
+                request.setAttribute("errMsg",errStringBuffer.toString());
+                return "tradeFail";
+
+            }
+
         }
 
 
@@ -140,6 +172,16 @@ public class OrderController {
         orderService.delTradeCode(userId);
 
         return "redirect://payment.gmall.com/index?orderId="+orderId;
+    }
+
+    /**
+     * 检验库存
+     * @return
+     */
+    public String checkSkuNum(OrderDetail orderDetail) {
+
+        String hasStock = HttpClientUtil.doGet("http://www.gware.com/hasStock?skuId=" + orderDetail.getSkuId() + "&num=" + orderDetail.getSkuNum());
+        return hasStock;
     }
 
     @RequestMapping("orderSplit")
@@ -162,5 +204,42 @@ public class OrderController {
 
         return JSON.toJSONString(list);
     }
+
+//    //List 1 2 3 4 5 6 7 8 9   找出所有能被3整除的数
+//    @Test
+//    public void test() {
+//        List<Integer> list = Arrays.asList(1,2,3,4,5,6,7,8,9);
+//
+//        //线程不安全
+//        //List resList = new ArrayList();
+//        //安全
+//        //List resList = new CopyOnWriteArrayList();
+//        //安全
+//        List resList = Collections.synchronizedList(new ArrayList<>());
+//        Stream<CompletableFuture<Boolean>> completableFutureStream = list.stream().map(num ->
+//                CompletableFuture.supplyAsync(() -> checkNum(num)).whenComplete((ifPass, ex) -> {
+//                    if (ifPass) {
+//                        resList.add(num);
+//                    }
+//                })
+//        );
+//        CompletableFuture[] completableFutures = completableFutureStream.toArray(CompletableFuture[]::new);
+//        CompletableFuture.allOf(completableFutures).join();
+//        System.err.println(resList.toString());
+//    }
+//
+//    private Boolean checkNum(Integer num) {
+//
+//        try {
+//            Thread.sleep(500);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//        if (num%3 == 0) {
+//            return true;
+//        }else {
+//            return false;
+//        }
+//    }
 
 }

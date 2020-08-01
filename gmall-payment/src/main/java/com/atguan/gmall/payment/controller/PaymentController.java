@@ -11,16 +11,22 @@ import com.atguan.gmall.bean.OrderInfo;
 import com.atguan.gmall.bean.PaymentInfo;
 import com.atguan.gmall.bean.enums.PaymentStatus;
 import com.atguan.gmall.payment.config.AlipayConfig;
+import com.atguan.gmall.payment.util.Streamutil;
 import com.atguan.gmall.service.OrderService;
 import com.atguan.gmall.service.PaymentService;
+import com.github.wxpay.sdk.WXPayUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,6 +44,10 @@ public class PaymentController {
     @Autowired
     private AlipayClient alipayClient;
 
+    // 密钥
+    @Value("${partnerkey}")
+    private String partnerkey;
+
     @RequestMapping("index")
     public String index(HttpServletRequest request,String orderId) {
 
@@ -46,6 +56,7 @@ public class PaymentController {
         request.setAttribute("orderId",orderId);
         //获取总金额
         OrderInfo orderInfo = orderService.getOrderInfo(orderId);
+
 
         request.setAttribute("totalAmount",orderInfo.getTotalAmount());
 
@@ -192,12 +203,48 @@ public class PaymentController {
 
         //String orderId = request.getParameter("orderId");
 
-        orderId = "109";
+
+//        orderId = "109";
         //调用服务层生成数据
         Map<String,String> map = paymentService.createNative(orderId,"0.01");
 
         System.err.println(map.get("code_url"));
         return map;
+    }
+
+    @RequestMapping("/wx/callback/notify")
+    public String notify(HttpServletRequest request,HttpServletResponse response) throws Exception {
+
+        ServletInputStream inputStream = request.getInputStream();
+
+        //将流转化为String
+        String string = Streamutil.inputStream2String(inputStream, "UTF-8");
+
+        //验签
+        if (WXPayUtil.isSignatureValid(string,partnerkey)) {
+
+            //判断状态
+            Map<String, String> map = WXPayUtil.xmlToMap(string);
+            String result_code = map.get("result_code");
+            if ("SUCCESS".equals(result_code)) {
+                //交易成功
+                //更新交易状态，发送消息队列
+                Map<String,String> returnMap = new HashMap<>();
+                returnMap.put("return_code","SUCCESS");
+                returnMap.put("return_msg","OK");
+                //将map转为xml
+                String mapToXml = WXPayUtil.mapToXml(returnMap);
+
+                //声明格式
+                response.setContentType("text/xml");
+                return mapToXml;
+            }else {
+                System.err.println("result_code"+map.get("result_code"));
+                System.err.println("result_msg"+map.get("result_msg"));
+            }
+        }
+
+        return null;
     }
 
     @RequestMapping("sendPaymentResult")

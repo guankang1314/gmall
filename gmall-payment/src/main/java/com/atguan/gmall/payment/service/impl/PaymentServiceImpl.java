@@ -132,6 +132,9 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public Map<String,String> createNative(String orderId, String s) {
 
+
+        OrderInfo orderInfo = orderService.getOrderInfo(orderId);
+
         //制作参数
         Map<String,String> map = new HashMap<>();
         map.put("appid",appid);
