@@ -48,32 +48,63 @@ public class ListController {
         //判断参数条makeUrlParam件
         String urlParam = makeUrlParam(skuLsParams);
         //迭代器
-        for (Iterator<BaseAttrInfo> attrInfoIterator = baseAttrInfoList.iterator(); attrInfoIterator.hasNext(); ) {
-            BaseAttrInfo baseAttrInfo = attrInfoIterator.next();
-            List<BaseAttrValue> attrValueList = baseAttrInfo.getAttrValueList();
+        Iterator<BaseAttrInfo> attrInfoIterator = baseAttrInfoList.iterator();
+        synchronized (attrInfoIterator) {
 
-            for (BaseAttrValue baseAttrValue : attrValueList) {
+            while (attrInfoIterator.hasNext()) {
 
-                if (skuLsParams.getValueId() != null && skuLsParams.getValueId().length > 0) {
-                    for (String valueId : skuLsParams.getValueId()) {
-                        if (valueId.equals(baseAttrValue.getId())) {
+                BaseAttrInfo baseAttrInfo = attrInfoIterator.next();
+                List<BaseAttrValue> attrValueList = baseAttrInfo.getAttrValueList();
 
-                            attrInfoIterator.remove();
+                for (BaseAttrValue baseAttrValue : attrValueList) {
 
-                            BaseAttrValue baseAttrValue1 = new BaseAttrValue();
-                            baseAttrValue1.setValueName(baseAttrInfo.getAttrName()+":"+baseAttrValue.getValueName());
+                    if (skuLsParams.getValueId() != null && skuLsParams.getValueId().length > 0) {
+                        for (String valueId : skuLsParams.getValueId()) {
+                            if (valueId.equals(baseAttrValue.getId())) {
 
-                            //重新制作url
-                            String makeUrlParam = makeUrlParam(skuLsParams, valueId);
-                            baseAttrValue1.setUrlParam(makeUrlParam);
-                            baseAttrValueList.add(baseAttrValue1);
+                                attrInfoIterator.remove();
+
+                                BaseAttrValue baseAttrValue1 = new BaseAttrValue();
+                                baseAttrValue1.setValueName(baseAttrInfo.getAttrName()+":"+baseAttrValue.getValueName());
+
+                                //重新制作url
+                                String makeUrlParam = makeUrlParam(skuLsParams, valueId);
+                                baseAttrValue1.setUrlParam(makeUrlParam);
+                                baseAttrValueList.add(baseAttrValue1);
 
 
+                            }
                         }
                     }
                 }
             }
         }
+//        for (Iterator<BaseAttrInfo> attrInfoIterator = baseAttrInfoList.iterator(); attrInfoIterator.hasNext(); ) {
+//            BaseAttrInfo baseAttrInfo = attrInfoIterator.next();
+//            List<BaseAttrValue> attrValueList = baseAttrInfo.getAttrValueList();
+//
+//            for (BaseAttrValue baseAttrValue : attrValueList) {
+//
+//                if (skuLsParams.getValueId() != null && skuLsParams.getValueId().length > 0) {
+//                    for (String valueId : skuLsParams.getValueId()) {
+//                        if (valueId.equals(baseAttrValue.getId())) {
+//
+//                            attrInfoIterator.remove();
+//
+//                            BaseAttrValue baseAttrValue1 = new BaseAttrValue();
+//                            baseAttrValue1.setValueName(baseAttrInfo.getAttrName()+":"+baseAttrValue.getValueName());
+//
+//                            //重新制作url
+//                            String makeUrlParam = makeUrlParam(skuLsParams, valueId);
+//                            baseAttrValue1.setUrlParam(makeUrlParam);
+//                            baseAttrValueList.add(baseAttrValue1);
+//
+//
+//                        }
+//                    }
+//                }
+//            }
+//        }
 
         //保存分页数据
         request.setAttribute("pageNo",skuLsParams.getPageNo());
