@@ -226,6 +226,7 @@ public class OrderController {
 //        CompletableFuture[] completableFutures = completableFutureStream.toArray(CompletableFuture[]::new);
 //        CompletableFuture.allOf(completableFutures).join();
 //        System.err.println(resList.toString());
+//        System.err.println(Arrays.toString(completableFutures));
 //    }
 //
 //    private Boolean checkNum(Integer num) {
