@@ -14,6 +14,7 @@
 ## 技术架构
 
 - SpringBoot
+- MySQL
 - Mybatis
 - Dubbo:高性能的rpc框架
 - Zookeeper:注册中心
